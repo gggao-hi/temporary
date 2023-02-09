@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 fun HomePage() {
     Theme {
         Column {
+            addDataDialog()
             Column(modifier = Modifier.weight(1.0f)) {
                 projectSelector()
                 featureFlagList()
@@ -23,10 +24,12 @@ fun HomePage() {
             bottomButton()
         }
 
+
     }
 }
 
 private val projectState = mutableStateOf("")
+private val dialogVisible = mutableStateOf(false)
 private val projects: List<String> = listOf("Mulan_6125", "Mulan_6125F")
 private val featureFlagDatas: Map<String, List<FeatureFlagStatusCollection>> = mapOf(
     Pair(
@@ -116,14 +119,13 @@ private fun projectSelector() {
 
 @Composable
 private fun bottomButton() {
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = 10.dp)
     ) {
         TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-
+            dialogVisible.value = true
         }) {
             Text("add")
 
@@ -142,5 +144,33 @@ private fun bottomButton() {
         }
     }
 
+}
 
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun addDataDialog() {
+    if (dialogVisible.value) {
+        AlertDialog(onDismissRequest = {},
+            title = {
+                Text("Add New Versions")
+            }, text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Spacer(Modifier.size(10.dp))
+                    TextField("", onValueChange = {}, label = { Text("romVersion") })
+                    Spacer(Modifier.size(10.dp))
+                    TextField("", onValueChange = {}, label = { Text("appVersion") })
+                }
+            },
+            buttons = {
+                Row {
+                    TextButton(onClick = { dialogVisible.value = false }) {
+                        Text("cancel")
+                    }
+                    TextButton(onClick = { dialogVisible.value = false
+                    }) {
+                        Text("sure")
+                    }
+                }
+            })
+    }
 }
