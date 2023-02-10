@@ -1,4 +1,3 @@
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -8,14 +7,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-@Preview
 @Composable
 fun HomePage() {
     Theme {
         Column {
-            addDataDialog()
+//            toast()
+//            insertCaseDialog()
+            if (newVersionDialogVisible.value) {
+                versionDialog()
+            }
+            if (configDialogVisible.value) {
+                configDialog()
+            }
+
             Column(modifier = Modifier.weight(1.0f)) {
                 projectSelector()
                 featureFlagList()
@@ -29,7 +37,8 @@ fun HomePage() {
 }
 
 private val projectState = mutableStateOf("")
-private val dialogVisible = mutableStateOf(false)
+private val newVersionDialogVisible = mutableStateOf(false)
+private val configDialogVisible = mutableStateOf(false)
 private val projects: List<String> = listOf("Mulan_6125", "Mulan_6125F")
 private val featureFlagDatas: Map<String, List<FeatureFlagStatusCollection>> = mapOf(
     Pair(
@@ -125,21 +134,27 @@ private fun bottomButton() {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = 10.dp)
     ) {
         TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-            dialogVisible.value = true
-        }) {
+            newVersionDialogVisible.value = true
+        }, enabled = projectState.value.isNotBlank()) {
             Text("add")
 
         }
         TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
 
-        }) {
+        }, enabled = projectState.value.isNotBlank()) {
             Text("test")
 
         }
         TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
 
-        }) {
+        }, enabled = projectState.value.isNotBlank()) {
             Text("upload")
+
+        }
+        TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
+            configDialogVisible.value = true
+        }, enabled = projectState.value.isNotBlank()) {
+            Text("config")
 
         }
     }
@@ -148,11 +163,11 @@ private fun bottomButton() {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun addDataDialog() {
-    if (dialogVisible.value) {
+private fun versionDialog() {
+    if (newVersionDialogVisible.value) {
         AlertDialog(onDismissRequest = {},
             title = {
-                Text("Add New Versions")
+                Text("Add New Versions", fontWeight = FontWeight.Bold)
             }, text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Spacer(Modifier.size(10.dp))
@@ -163,10 +178,11 @@ private fun addDataDialog() {
             },
             buttons = {
                 Row {
-                    TextButton(onClick = { dialogVisible.value = false }) {
+                    TextButton(onClick = { newVersionDialogVisible.value = false }) {
                         Text("cancel")
                     }
-                    TextButton(onClick = { dialogVisible.value = false
+                    TextButton(onClick = {
+                        newVersionDialogVisible.value = false
                     }) {
                         Text("sure")
                     }
@@ -174,3 +190,110 @@ private fun addDataDialog() {
             })
     }
 }
+
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun configDialog() {
+
+    AlertDialog(onDismissRequest = {},
+        title = {
+            Text("Config", fontWeight = FontWeight.Bold)
+        }, text = {
+            Box(modifier = Modifier.size(300.dp, 300.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom,
+                    modifier = Modifier.fillMaxSize().padding(vertical = 20.dp)
+                ) {
+                    TextButton(
+                        colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray),
+                        onClick = {
+
+                        }) {
+                        Text("unit case", maxLines = 1)
+
+                    }
+                    TextButton(
+                        colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray),
+                        onClick = {
+
+                        }) {
+                        Text("feature flag status type", maxLines = 1)
+
+                    }
+                }
+            }
+        },
+        buttons = {
+            Row {
+                TextButton(onClick = { configDialogVisible.value = false }) {
+                    Text("cancel")
+                }
+                TextButton(onClick = {
+                    configDialogVisible.value = false
+                }) {
+                    Text("sure")
+                }
+            }
+        })
+
+}
+
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun toast() {
+    AlertDialog(onDismissRequest = {},
+        title = {
+            Text("Tips", fontWeight = FontWeight.Bold)
+        }, text = {
+            Text(
+                "您本次指定了romVersion:100, appVersion:123,\n若仅适用于 100=device_romVersion and 123=device_romVersion的情况,\n则需要插入一条屏蔽 100<device_romVersion and 123<device_romVersion 情况的数据.",
+                modifier = Modifier.width(400.dp), textAlign = TextAlign.Start, fontWeight = FontWeight.SemiBold
+            )
+        },
+        buttons = {
+            Row {
+                TextButton(onClick = { configDialogVisible.value = false }) {
+                    Text("no need")
+                }
+                TextButton(onClick = { configDialogVisible.value = false }) {
+                    Text("insert")
+                }
+            }
+
+        })
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+
+@Composable
+private fun insertCaseDialog() {
+    AlertDialog(onDismissRequest = {},
+        title = {
+            Text("Add Case", fontWeight = FontWeight.Bold)
+        }, text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Spacer(Modifier.size(10.dp))
+                TextField("", onValueChange = {}, label = { Text("device_romVersion") })
+                Spacer(Modifier.size(10.dp))
+                TextField("", onValueChange = {}, label = { Text("device_appVersion") })
+            }
+        },
+        buttons = {
+            Row {
+                TextButton(onClick = { newVersionDialogVisible.value = false }) {
+                    Text("Cancel")
+                }
+                TextButton(onClick = {
+                    newVersionDialogVisible.value = false
+                }) {
+                    Text("Create")
+                }
+            }
+        })
+
+}
+
+
