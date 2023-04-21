@@ -7,7 +7,12 @@ fun main() = application {
     Window(
         icon = painterResource("app_static_widget_map.png"),
         title = "Feature Flag Config",
-        onCloseRequest = ::exitApplication
+        onCloseRequest = {
+            Logger.close()
+            Thread.sleep(1000)
+            exitApplication()
+
+        }
     ) {
         HomePage()
     }

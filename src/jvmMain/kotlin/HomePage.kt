@@ -1,299 +1,196 @@
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
+
+private val dbHelper = DBHelper()
+private val verifyHelper = VerifyHelper().apply {
+    this.onVerifyResultListener = object : VerifyHelper.OnVerifyResultListener {
+        override fun onAppVersionResult(result: List<String>) {
+            combineString(result)?.apply {
+                verifyAppVersionResult.value = this
+            }
+            appVersionVerified.value = true
+
+        }
+
+        override fun onRomVersionResult(result: List<String>) {
+            combineString(result)?.apply {
+                verifyRomVersionResult.value = this
+            }
+            romVersionVerified.value = true
+
+        }
+
+        override fun onDisabledFeaturesResult(result: List<String>) {
+            combineString(result)?.apply {
+                verifyDisabledFeatureResult.value = this
+            }
+            disabledFeaturesVerified.value = true
+        }
+
+        private fun combineString(result: List<String>): String? {
+            return result.takeIf { it.isNotEmpty() }?.let { list ->
+                val appResult = StringBuffer()
+                list.forEach { item ->
+                    appResult.append(item).append("\n")
+                }
+                appResult.toString()
+            }
+        }
+    }
+}
 
 @Composable
 fun HomePage() {
-    Theme {
-        Column {
-//            toast()
-//            insertCaseDialog()
-            if (newVersionDialogVisible.value) {
-                versionDialog()
-            }
-            if (configDialogVisible.value) {
-                configDialog()
-            }
-
-            Column(modifier = Modifier.weight(1.0f)) {
-                projectSelector()
-                featureFlagList()
-            }
-
-            bottomButton()
-        }
-
-
-    }
-}
-
-private val projectState = mutableStateOf("")
-private val newVersionDialogVisible = mutableStateOf(false)
-private val configDialogVisible = mutableStateOf(false)
-private val projects: List<String> = listOf("Mulan_6125", "Mulan_6125F")
-private val featureFlagDatas: Map<String, List<FeatureFlagStatusCollection>> = mapOf(
-    Pair(
-        "Mulan_6125", listOf(
-            FeatureFlagStatusCollection(
-                0, 0, FeatureFlagStatus(false, MapStreamingAndADMStatus.Open), FeatureFlagStatus(false, true)
-            ), FeatureFlagStatusCollection(
-                100, 0, FeatureFlagStatus(false, MapStreamingAndADMStatus.Open), FeatureFlagStatus(false, false)
-            ), FeatureFlagStatusCollection(
-                0, 123, FeatureFlagStatus(false, MapStreamingAndADMStatus.Close), FeatureFlagStatus(false, true)
-            ), FeatureFlagStatusCollection(
-                100, 123, FeatureFlagStatus(false, MapStreamingAndADMStatus.Close), FeatureFlagStatus(false, false)
-            )
-        )
-    )
-)
-
-
-@Composable
-private fun featureFlagList() {
-    projectState.let {
-        featureFlagDatas[it.value]
-    }?.also { data ->
-        LazyVerticalGrid(columns = GridCells.Adaptive(160.dp), contentPadding = PaddingValues(10.dp)) {
-            println("${data.size}")
-            items(data) {
-
-                Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("romVersion: ${it.romVersion}", modifier = Modifier.padding(5.dp))
-                    Text("appVersion: ${it.appVersion}", modifier = Modifier.padding(5.dp))
-                }
-            }
-        }
-    }
-
-}
-
-@Composable
-private fun projectSelector() {
-    var selectedProject: String by remember {
-        mutableStateOf("select project")
-    }
-    var expended: Boolean by remember {
-        mutableStateOf(false)
-    }
-    Row {
-        Row(
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(10.dp).weight(3.0f)
-        ) {
-            Text("project:")
-            Box {
-                TextButton(onClick = {
-                    expended = true
-                }, content = {
-                    Text(selectedProject)
-                })
-                DropdownMenu(expanded = expended, onDismissRequest = {}) {
-                    projects.forEach {
-                        DropdownMenuItem(onClick = {
-                            selectedProject = it
-
-                            expended = false
-                        }) {
-                            Text(it)
-                        }
-                    }
-
-                }
-            }
-
-        }
-        Box(modifier = Modifier.weight(1.0f)) {
-            TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray),
-                modifier = Modifier.padding(20.dp, 0.dp),
-                onClick = {
-                    projectState.value = selectedProject
+    Logger.init()
+    MaterialTheme {
+        Column(modifier = Modifier.fillMaxSize(1.0f).padding(10.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(1.0f), horizontalArrangement = Arrangement.Center) {
+                Button({
+                    chooseDBFile()
                 }) {
-                Text("download")
-
-            }
-        }
-
-    }
-}
-
-@Composable
-private fun bottomButton() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = 10.dp)
-    ) {
-        TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-            newVersionDialogVisible.value = true
-        }, enabled = projectState.value.isNotBlank()) {
-            Text("add")
-
-        }
-        TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-
-        }, enabled = projectState.value.isNotBlank()) {
-            Text("test")
-
-        }
-        TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-
-        }, enabled = projectState.value.isNotBlank()) {
-            Text("upload")
-
-        }
-        TextButton(colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray), onClick = {
-            configDialogVisible.value = true
-        }, enabled = projectState.value.isNotBlank()) {
-            Text("config")
-
-        }
-    }
-
-}
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-private fun versionDialog() {
-    if (newVersionDialogVisible.value) {
-        AlertDialog(onDismissRequest = {},
-            title = {
-                Text("Add New Versions", fontWeight = FontWeight.Bold)
-            }, text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Spacer(Modifier.size(10.dp))
-                    TextField("", onValueChange = {}, label = { Text("romVersion") })
-                    Spacer(Modifier.size(10.dp))
-                    TextField("", onValueChange = {}, label = { Text("appVersion") })
+                    Text("load db file")
                 }
-            },
-            buttons = {
-                Row {
-                    TextButton(onClick = { newVersionDialogVisible.value = false }) {
-                        Text("cancel")
-                    }
-                    TextButton(onClick = {
-                        newVersionDialogVisible.value = false
-                    }) {
-                        Text("sure")
-                    }
-                }
-            })
-    }
-}
-
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-private fun configDialog() {
-
-    AlertDialog(onDismissRequest = {},
-        title = {
-            Text("Config", fontWeight = FontWeight.Bold)
-        }, text = {
-            Box(modifier = Modifier.size(300.dp, 300.dp)) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom,
-                    modifier = Modifier.fillMaxSize().padding(vertical = 20.dp)
-                ) {
-                    TextButton(
-                        colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray),
-                        onClick = {
-
-                        }) {
-                        Text("unit case", maxLines = 1)
-
-                    }
-                    TextButton(
-                        colors = ButtonDefaults.textButtonColors(Color.Blue, Color.White, Color.Gray),
-                        onClick = {
-
-                        }) {
-                        Text("feature flag status type", maxLines = 1)
-
-                    }
-                }
-            }
-        },
-        buttons = {
-            Row {
-                TextButton(onClick = { configDialogVisible.value = false }) {
-                    Text("cancel")
-                }
-                TextButton(onClick = {
-                    configDialogVisible.value = false
+                Spacer(Modifier.size(40.dp))
+                Button({
+                    verify()
                 }) {
-                    Text("sure")
+                    Text("verify")
                 }
             }
-        })
-
-}
-
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-private fun toast() {
-    AlertDialog(onDismissRequest = {},
-        title = {
-            Text("Tips", fontWeight = FontWeight.Bold)
-        }, text = {
             Text(
-                "您本次指定了romVersion:100, appVersion:123,\n若仅适用于 100=device_romVersion and 123=device_romVersion的情况,\n则需要插入一条屏蔽 100<device_romVersion and 123<device_romVersion 情况的数据.",
-                modifier = Modifier.width(400.dp), textAlign = TextAlign.Start, fontWeight = FontWeight.SemiBold
+                "db file path: ${dbFilePath.value}",
+                modifier = Modifier.fillMaxWidth(1.0f),
+                fontSize = 20.0.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Bold
             )
-        },
-        buttons = {
-            Row {
-                TextButton(onClick = { configDialogVisible.value = false }) {
-                    Text("no need")
+            Spacer(modifier = Modifier.height(10.dp).fillMaxWidth(1.0f))
+            Text(
+                "verify result:",
+                modifier = Modifier.fillMaxWidth(1.0f),
+                fontSize = 20.0.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(10.dp).fillMaxWidth(1.0f))
+            Column(modifier = Modifier.fillMaxWidth(1.0f).verticalScroll(ScrollState(0))) {
+                if (verifyAppVersionResult.value.isNotEmpty()) {
+                    Text(
+                        "App Version Verify Result:",
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 20.0.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        verifyAppVersionResult.value,
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 18.0.sp,
+                        color = Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(10.dp).fillMaxWidth(1.0f))
                 }
-                TextButton(onClick = { configDialogVisible.value = false }) {
-                    Text("insert")
+                if (verifyRomVersionResult.value.isNotEmpty()) {
+                    Text(
+                        "Rom Version Verify Result:",
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 20.0.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        verifyRomVersionResult.value,
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 18.0.sp,
+                        color = Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(10.dp).fillMaxWidth(1.0f))
                 }
+                if (verifyDisabledFeatureResult.value.isNotEmpty()) {
+                    Text(
+                        "Disabled Features Verify Result:",
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 20.0.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        verifyDisabledFeatureResult.value,
+                        modifier = Modifier.fillMaxWidth(1.0f),
+                        fontSize = 18.0.sp,
+                        color = Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(10.dp).fillMaxWidth(1.0f))
+                }
+
+                if (appVersionVerified.value && romVersionVerified.value && disabledFeaturesVerified.value
+                    && verifyAppVersionResult.value.isEmpty() && verifyRomVersionResult.value.isEmpty()
+                    && verifyDisabledFeatureResult.value.isEmpty()
+                ) {
+                    Text(
+                        "Verify Pass ",
+                        modifier = Modifier.fillMaxWidth(1.0f).align(Alignment.CenterHorizontally),
+                        fontSize = 22.0.sp,
+                        color = Color.Green,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
             }
 
-        })
+        }
+    }
+
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 
-@Composable
-private fun insertCaseDialog() {
-    AlertDialog(onDismissRequest = {},
-        title = {
-            Text("Add Case", fontWeight = FontWeight.Bold)
-        }, text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Spacer(Modifier.size(10.dp))
-                TextField("", onValueChange = {}, label = { Text("device_romVersion") })
-                Spacer(Modifier.size(10.dp))
-                TextField("", onValueChange = {}, label = { Text("device_appVersion") })
-            }
-        },
-        buttons = {
-            Row {
-                TextButton(onClick = { newVersionDialogVisible.value = false }) {
-                    Text("Cancel")
-                }
-                TextButton(onClick = {
-                    newVersionDialogVisible.value = false
-                }) {
-                    Text("Create")
-                }
-            }
-        })
+private val verifyAppVersionResult: MutableState<String> = mutableStateOf("")
+private val verifyRomVersionResult: MutableState<String> = mutableStateOf("")
+private val verifyDisabledFeatureResult: MutableState<String> = mutableStateOf("")
+private val appVersionVerified: MutableState<Boolean> = mutableStateOf(false)
+private val romVersionVerified: MutableState<Boolean> = mutableStateOf(false)
+private val disabledFeaturesVerified: MutableState<Boolean> = mutableStateOf(false)
 
+private fun resetVerified() {
+    appVersionVerified.value = false
+    romVersionVerified.value = false
+    disabledFeaturesVerified.value = false
 }
 
+private fun verify() {
+    resetVerified()
+    dbHelper.query(dbFilePath.value) {
+        println("size: ${it.size}")
+        verifyHelper.verify(it)
+
+    }
+}
+
+private val dbFilePath: MutableState<String> = mutableStateOf("")
+private fun chooseDBFile() {
+    resetVerified()
+    JFileChooser().apply {
+        this.fileFilter = FileNameExtensionFilter(".db", "db")
+        this.fileSelectionMode = JFileChooser.FILES_ONLY
+        showDialog(ComposeWindow(), "ok")
+        dbFilePath.value = selectedFile?.absolutePath ?: ""
+    }
+}
 
